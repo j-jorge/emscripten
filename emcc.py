@@ -1112,7 +1112,13 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
       shared.Settings.EXPORT_ES6 = 1
       shared.Settings.MODULARIZE = 1
 
-    wasm_target = unsuffixed(target) + '.wasm' # might not be used
+    if shared.Settings.SIDE_MODULE or final_suffix in WASM_ENDINGS:
+      # If the user asks directly for a wasm file then this *is* the target
+      wasm_target = target
+    else:
+      # Otherwise the wasm file is produced alongside the final target.
+      wasm_target = unsuffixed(target) + '.wasm'
+
     wasm_source_map_target = wasm_target + '.map'
 
     # Apply user -jsD settings
@@ -1313,7 +1319,7 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
       else:
         link_to_object = True
 
-    if not link_to_object and not compile_only and final_suffix not in EXECUTABLE_ENDINGS:
+    if not link_to_object and not compile_only and final_suffix not in EXECUTABLE_ENDINGS and not shared.Settings.SIDE_MODULE:
       # TODO(sbc): Remove this emscripten-specific special case.  We should only generate object
       # file output with an explicit `-c` or `-r`.
       diagnostics.warning('emcc', 'assuming object file output, based on output filename alone.  Add an explict `-c`, `-r` or `-shared` to avoid this warning')
@@ -1881,7 +1887,7 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
         return 0
 
       # Precompiled headers support
-      if has_header_inputs:
+      if has_header_inputs or 'header' in language_mode:
         headers = [header for _, header in input_files]
         for header in headers:
           if not header.endswith(HEADER_ENDINGS):
@@ -2225,12 +2231,12 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
 
       shared.JS.handle_license(final)
 
-      if final_suffix in JS_ENDINGS:
-        js_target = target
-      elif final_suffix in WASM_ENDINGS:
+      if final_suffix in WASM_ENDINGS:
         js_target = misc_temp_files.get(suffix='.js').name
-      else:
+      elif final_suffix == '.html':
         js_target = unsuffixed(target) + '.js'
+      else:
+        js_target = target
 
       # The JS is now final. Move it to its final location
       shutil.move(final, js_target)

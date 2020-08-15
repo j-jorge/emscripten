@@ -7262,13 +7262,17 @@ int main() {
 
   def test_wasm_targets_side_module(self):
     # side modules do allow a wasm target
-    for opts, target in [([], 'a.out.wasm'), (['-o', 'lib.wasm'], 'lib.wasm')]:
+    for opts, target in [([], 'a.out.wasm'),
+                         (['-o', 'lib.wasm'], 'lib.wasm'),
+                         (['-o', 'lib.so'], 'lib.so'),
+                         (['-o', 'foo.bar'], 'foo.bar')]:
       # specified target
       print('building: ' + target)
       self.clear()
       self.run_process([EMCC, path_from_root('tests', 'hello_world.cpp'), '-s', 'SIDE_MODULE=1', '-Werror'] + opts)
       for x in os.listdir('.'):
         self.assertFalse(x.endswith('.js'))
+      self.assertTrue(building.is_wasm(target))
       self.assertIn(b'dylink', open(target, 'rb').read())
 
   def test_wasm_backend_lto(self):
